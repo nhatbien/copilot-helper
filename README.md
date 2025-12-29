@@ -1,132 +1,285 @@
 # Copilot Helper Pro
 
-[![Version](https://img.shields.io/visual-studio-marketplace/v/vicanent.copilot-helper-pro?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=vicanent.copilot-helper-pro)
-[![Downloads](https://img.shields.io/visual-studio-marketplace/d/vicanent.copilot-helper-pro?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=vicanent.copilot-helper-pro)
-[![Rating](https://img.shields.io/visual-studio-marketplace/r/vicanent.copilot-helper-pro?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=vicanent.copilot-helper-pro)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](LICENSE)
-[![VS Code](https://img.shields.io/badge/VS%20Code-1.104.0%2B-blue.svg?style=flat-square)](https://code.visualstudio.com/)
+<p align="center">
+  <img src="logo_ai.png" alt="Copilot Helper Pro" width="128" height="128">
+</p>
 
-An extension that provides model support for GitHub Copilot Chat, including ZhipuAI, MiniMax, MoonshotAI, DeepSeek, Alibaba Cloud Bailian, and custom OpenAI/Anthropic compatible models.
+<p align="center">
+  <strong>Supercharge your GitHub Copilot with multiple AI providers</strong>
+</p>
 
-## Features
+<p align="center">
+  <a href="https://marketplace.visualstudio.com/items?itemName=vicanent.copilot-helper-pro">
+    <img src="https://img.shields.io/visual-studio-marketplace/v/vicanent.copilot-helper-pro?style=for-the-badge&logo=visual-studio-code&logoColor=white&label=Version&color=007ACC" alt="Version">
+  </a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=vicanent.copilot-helper-pro">
+    <img src="https://img.shields.io/visual-studio-marketplace/d/vicanent.copilot-helper-pro?style=for-the-badge&logo=visual-studio-code&logoColor=white&label=Downloads&color=28A745" alt="Downloads">
+  </a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=vicanent.copilot-helper-pro">
+    <img src="https://img.shields.io/visual-studio-marketplace/r/vicanent.copilot-helper-pro?style=for-the-badge&logo=visual-studio-code&logoColor=white&label=Rating&color=FFC107" alt="Rating">
+  </a>
+</p>
 
-- Multiple AI Model Support
-    - ZhipuAI (GLM Coding Plan)
-    - MiniMax (Coding Plan)
-    - MoonshotAI (Kimi For Coding)
-    - DeepSeek
-    - Antigravity (Google Cloud Code)
-        - Streaming responses with real-time output
-        - Rate limit monitoring and automatic fallback
-        - Quota tracking with usage statistics
-        - Multi-account support with auto-switching
-        - Signature-based request validation
-        - Backoff and retry strategies for quota limits
-    - Codex (OpenAI)
-        - Full access sandbox mode with unrestricted filesystem and network access
-        - Apply patch tool for efficient batch file editing
-        - Shell command execution for terminal operations
-        - Manage todo list for task tracking and planning
-        - Streaming responses with thinking blocks
-        - Rate limit monitoring and automatic account switching
-        - Custom OpenAI/Anthropic Compatible models
+<p align="center">
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="License">
+  </a>
+  <a href="https://code.visualstudio.com/">
+    <img src="https://img.shields.io/badge/VS%20Code-1.104.0+-007ACC.svg?style=for-the-badge&logo=visual-studio-code&logoColor=white" alt="VS Code">
+  </a>
+  <a href="https://nodejs.org/">
+    <img src="https://img.shields.io/badge/Node.js-20.0+-339933.svg?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js">
+  </a>
+</p>
 
-- Advanced Features
-    - Web Search integration (ZhipuAI, MiniMax)
-    - FIM (Fill In the Middle) completion
-    - NES (Next Edit Suggestions) completion
-    - Account management with multi-account support
-    - Token usage tracking
-    - Quota monitoring
+---
+
+## Overview
+
+An extension that provides model support for GitHub Copilot Chat, including **ZhipuAI**, **MiniMax**, **MoonshotAI**, **DeepSeek**, **Antigravity (Google Cloud Code)**, **Codex (OpenAI)**, and custom **OpenAI/Anthropic** compatible models.
+
+---
+
+## Supported Providers
+
+| Provider        | Description          | Features                                     |
+| --------------- | -------------------- | -------------------------------------------- |
+| **ZhipuAI**     | GLM Coding Plan      | Web Search, MCP SDK                          |
+| **MiniMax**     | Coding Plan          | Web Search, Domestic/International endpoints |
+| **MoonshotAI**  | Kimi For Coding      | High-quality responses                       |
+| **DeepSeek**    | DeepSeek AI          | Fast inference                               |
+| **Antigravity** | Google Cloud Code    | Gemini models, Quota tracking                |
+| **Codex**       | OpenAI               | GPT-5, Apply Patch, Shell execution          |
+| **Compatible**  | OpenAI/Anthropic API | Custom models support                        |
+
+---
+
+## Key Features
+
+### Multi-Account Management
+
+<table>
+<tr>
+<td width="60">
+<img src="https://img.icons8.com/fluency/48/user-group-man-man.png" width="48"/>
+</td>
+<td>
+
+**Manage multiple accounts per provider**
+
+- Add unlimited accounts for each AI provider
+- Quick switch between accounts with `Ctrl+Shift+Q` / `Cmd+Shift+Q`
+- Visual account status in the status bar
+- Secure credential storage using VS Code Secret Storage
+
+</td>
+</tr>
+</table>
+
+### Load Balancing & Auto-Switching
+
+<table>
+<tr>
+<td width="60">
+<img src="https://img.icons8.com/fluency/48/load-balancer.png" width="48"/>
+</td>
+<td>
+
+**Automatic load distribution across accounts**
+
+- When one account hits rate limits or quota exhaustion, automatically switch to another available account
+- Intelligent retry with exponential backoff strategy
+- Real-time quota monitoring and usage statistics
+- Seamless failover without interrupting your workflow
+
+</td>
+</tr>
+</table>
+
+### Antigravity (Google Cloud Code)
+
+<table>
+<tr>
+<td width="60">
+<img src="https://img.icons8.com/fluency/48/google-cloud.png" width="48"/>
+</td>
+<td>
+
+**Access Gemini models via Google Cloud Code**
+
+- Streaming responses with real-time output
+- Rate limit monitoring with automatic fallback to backup endpoints
+- Quota tracking with detailed usage statistics
+- Multi-account support with intelligent auto-switching
+- Signature-based request validation for security
+- Backoff and retry strategies for quota limits
+
+</td>
+</tr>
+</table>
+
+### Codex (OpenAI)
+
+<table>
+<tr>
+<td width="60">
+<img src="https://img.icons8.com/fluency/48/chatgpt.png" width="48"/>
+</td>
+<td>
+
+**Full access to OpenAI Codex capabilities**
+
+- **Full Access Sandbox Mode**: Unrestricted filesystem and network access
+- **Apply Patch Tool**: Efficient batch file editing with unified diff format
+- **Shell Command Execution**: Run terminal commands directly
+- **Todo List Management**: Track tasks and plan your work session
+- **Thinking Blocks**: View model reasoning in real-time
+- **Rate Limit Monitoring**: Auto-switch accounts when limits are reached
+
+</td>
+</tr>
+</table>
+
+### Advanced Completion
+
+<table>
+<tr>
+<td width="60">
+<img src="https://img.icons8.com/fluency/48/code.png" width="48"/>
+</td>
+<td>
+
+**Smart code completion features**
+
+- **FIM (Fill In the Middle)**: Intelligent code completion based on context
+- **NES (Next Edit Suggestions)**: Predictive editing suggestions
+- **Web Search Integration**: Real-time information via ZhipuAI and MiniMax
+- **Token Usage Tracking**: Monitor your API usage in real-time
+
+</td>
+</tr>
+</table>
+
+---
 
 ## Installation
 
-### From VSCode Marketplace
+### From VS Code Marketplace
 
-1. Open VSCode
-2. Go to Extensions view (`Ctrl+Shift+X` / `Cmd+Shift+X`)
+```
+1. Open VS Code
+2. Go to Extensions (Ctrl+Shift+X / Cmd+Shift+X)
 3. Search for "Copilot Helper Pro"
 4. Click Install
+```
 
 ### From .vsix File
 
-1. Download the latest `.vsix` file from the [Releases](https://github.com/nhatbien/copilot-helper/releases) page
-2. Open VSCode
-3. Run command: `Extensions: Install from VSIX...`
-4. Select the downloaded `.vsix` file
+```bash
+# Download from releases page
+# Then in VS Code:
+# Cmd+Shift+P > "Extensions: Install from VSIX..."
+```
 
 ### Build from Source
 
 ```bash
-# Clone the repository
 git clone https://github.com/nhatbien/copilot-helper.git
 cd copilot-helper
-
-# Install dependencies
 npm install
-
-# Compile the extension
 npm run compile
-
-# Package the extension
 npm run package
 ```
 
-## Requirements
+---
 
-- Visual Studio Code >= 1.104.0
-- GitHub Copilot Chat extension
-- Node.js >= 20.0.0
-- npm >= 9.0.0
+## Quick Start
 
-## Configuration
+### 1. Configure Provider
 
-### ZhipuAI
+| Provider    | Command                                                 |
+| ----------- | ------------------------------------------------------- |
+| ZhipuAI     | `Cmd+Shift+P` > `ZhipuAI Configuration Wizard`          |
+| MiniMax     | `Cmd+Shift+P` > `Start MiniMax Configuration Wizard`    |
+| MoonshotAI  | `Cmd+Shift+P` > `Start MoonshotAI Configuration Wizard` |
+| DeepSeek    | `Cmd+Shift+P` > `Set DeepSeek API Key`                  |
+| Antigravity | `Cmd+Shift+P` > `Antigravity Login`                     |
+| Codex       | `Cmd+Shift+P` > `Codex Login`                           |
+| Custom      | `Cmd+Shift+P` > `Compatible Provider Settings`          |
 
-```bash
-Cmd+Shift+P > "ZhipuAI Configuration Wizard"
+### 2. Add Multiple Accounts (Optional)
+
+```
+Cmd+Shift+P > "Copilot Helper Pro: Manage Accounts"
 ```
 
-### MiniMax
+### 3. Enable Load Balancing
 
-```bash
-Cmd+Shift+P > "Start MiniMax Configuration Wizard"
+```
+Cmd+Shift+P > "Copilot Helper Pro: Open Account Manager"
+Toggle "Load Balance" for your provider
 ```
 
-### MoonshotAI
-
-```bash
-Cmd+Shift+P > "Start MoonshotAI Configuration Wizard"
-```
-
-### DeepSeek
-
-```bash
-Cmd+Shift+P > "Set DeepSeek API Key"
-```
-
-### Custom Models
-
-```bash
-Cmd+Shift+P > "Compatible Provider Settings"
-```
+---
 
 ## Keybindings
 
-- `Alt+/` - Trigger inline completion
-- `Shift+Alt+/` - Toggle NES manual trigger mode
-- `Ctrl+Shift+A` / `Cmd+Shift+A` - Attach selection to Copilot Chat
-- `Ctrl+Shift+H` / `Cmd+Shift+H` - Insert handle reference
-- `Ctrl+Shift+Q` / `Cmd+Shift+Q` - Quick switch account
+| Shortcut                       | Action                           |
+| ------------------------------ | -------------------------------- |
+| `Alt+/`                        | Trigger inline completion        |
+| `Shift+Alt+/`                  | Toggle NES manual mode           |
+| `Ctrl+Shift+A` / `Cmd+Shift+A` | Attach selection to Copilot Chat |
+| `Ctrl+Shift+H` / `Cmd+Shift+H` | Insert handle reference          |
+| `Ctrl+Shift+Q` / `Cmd+Shift+Q` | Quick switch account             |
+
+---
+
+## Requirements
+
+| Requirement         | Version    |
+| ------------------- | ---------- |
+| VS Code             | >= 1.104.0 |
+| Node.js             | >= 20.0.0  |
+| npm                 | >= 9.0.0   |
+| GitHub Copilot Chat | Required   |
+
+---
 
 ## License
 
-MIT
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+---
 
 ## Credits
 
-Special thanks to:
+Special thanks to these amazing projects:
 
-- [LLMux](https://github.com/Pimzino/LLMux)
-- [GCMP](https://github.com/VicBilibily/GCMP)
-- [AntigravityQuotaWatcher](https://github.com/wusimpl/AntigravityQuotaWatcher)
+<table>
+<tr>
+<td align="center">
+<a href="https://github.com/Pimzino/LLMux">
+<img src="https://github.com/Pimzino.png" width="60" style="border-radius: 50%"/><br/>
+<strong>LLMux</strong>
+</a>
+</td>
+<td align="center">
+<a href="https://github.com/VicBilibily/GCMP">
+<img src="https://github.com/VicBilibily.png" width="60" style="border-radius: 50%"/><br/>
+<strong>GCMP</strong>
+</a>
+</td>
+<td align="center">
+<a href="https://github.com/wusimpl/AntigravityQuotaWatcher">
+<img src="https://github.com/wusimpl.png" width="60" style="border-radius: 50%"/><br/>
+<strong>AntigravityQuotaWatcher</strong>
+</a>
+</td>
+</tr>
+</table>
+
+---
+
+<p align="center">
+  Made with love for the developer community
+</p>
