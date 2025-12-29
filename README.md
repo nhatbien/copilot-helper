@@ -1,5 +1,11 @@
 # Copilot Helper Pro
 
+[![Version](https://img.shields.io/visual-studio-marketplace/v/vicanent.copilot-helper-pro?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=vicanent.copilot-helper-pro)
+[![Downloads](https://img.shields.io/visual-studio-marketplace/d/vicanent.copilot-helper-pro?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=vicanent.copilot-helper-pro)
+[![Rating](https://img.shields.io/visual-studio-marketplace/r/vicanent.copilot-helper-pro?style=flat-square)](https://marketplace.visualstudio.com/items?itemName=vicanent.copilot-helper-pro)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](LICENSE)
+[![VS Code](https://img.shields.io/badge/VS%20Code-1.104.0%2B-blue.svg?style=flat-square)](https://code.visualstudio.com/)
+
 An extension that provides model support for GitHub Copilot Chat, including ZhipuAI, MiniMax, MoonshotAI, DeepSeek, Alibaba Cloud Bailian, and custom OpenAI/Anthropic compatible models.
 
 ## Features
@@ -35,10 +41,43 @@ An extension that provides model support for GitHub Copilot Chat, including Zhip
 
 ## Installation
 
-1. Install the extension from the VSCode Marketplace
-2. Open VSCode and go to Extensions
+### From VSCode Marketplace
+
+1. Open VSCode
+2. Go to Extensions view (`Ctrl+Shift+X` / `Cmd+Shift+X`)
 3. Search for "Copilot Helper Pro"
 4. Click Install
+
+### From .vsix File
+
+1. Download the latest `.vsix` file from the [Releases](https://github.com/nhatbien/copilot-helper/releases) page
+2. Open VSCode
+3. Run command: `Extensions: Install from VSIX...`
+4. Select the downloaded `.vsix` file
+
+### Build from Source
+
+```bash
+# Clone the repository
+git clone https://github.com/nhatbien/copilot-helper.git
+cd copilot-helper
+
+# Install dependencies
+npm install
+
+# Compile the extension
+npm run compile
+
+# Package the extension
+npm run package
+```
+
+## Requirements
+
+- Visual Studio Code >= 1.104.0
+- GitHub Copilot Chat extension
+- Node.js >= 20.0.0
+- npm >= 9.0.0
 
 ## Configuration
 
