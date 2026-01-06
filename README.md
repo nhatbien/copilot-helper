@@ -263,7 +263,27 @@ Special thanks to these amazing projects:
 
 ---
 
-## 📄 License
+## � Support & Contact
+
+<div align="center">
+
+### Support This Project
+
+If you find this extension helpful, consider supporting its development:
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/S6S51OF1O4)
+
+### Get in Touch
+
+Have questions or suggestions? Reach out on Telegram:
+
+[![Telegram](https://img.shields.io/badge/Telegram-@bie9999-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/bie9999)
+
+</div>
+
+---
+
+## �📄 License
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
