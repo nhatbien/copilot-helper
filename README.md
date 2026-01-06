@@ -14,9 +14,11 @@
 [![VS Code](https://img.shields.io/badge/VS%20Code-1.104.0+-007ACC.svg?style=for-the-badge&logo=visual-studio-code&logoColor=white)](https://code.visualstudio.com/)
 [![Node.js](https://img.shields.io/badge/Node.js-20.0+-339933.svg?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
 
+[![Follow on X](https://img.shields.io/badge/Follow-@bien__nh90206-1DA1F2?style=for-the-badge&logo=x&logoColor=white)](https://x.com/bien_nh90206)
+
 <br/>
 
-[📦 Install](#-installation) · [🚀 Quick Start](#-quick-start) · [✨ Features](#-key-features) · [⌨️ Keybindings](#%EF%B8%8F-keybindings)
+[📦 Install](#-installation) · [🚀 Quick Start](#-quick-start) · [✨ Features](#-key-features)
 
 </div>
 
@@ -28,7 +30,7 @@ A powerful VS Code extension that provides model support for **GitHub Copilot Ch
 
 ---
 
-## 🤖 Supported Providers
+## 🤖 Supported Providers<!--  -->
 
 <div align="center">
 
@@ -224,18 +226,6 @@ Toggle the **"Load Balance"** switch to enable automatic account switching when 
 - 🔄 **Switch Account**: Use `Ctrl+Shift+Q` / `Cmd+Shift+Q` for quick switching
 - ⚖️ **Load Balance**: Automatically distribute requests across accounts
 - 📊 **Quota Tracking**: Monitor usage and remaining quota in real-time
-
----
-
-## ⌨️ Keybindings
-
-| Shortcut                       | Action                              |
-| :----------------------------- | :---------------------------------- |
-| `Alt+/`                        | 🎯 Trigger inline completion        |
-| `Shift+Alt+/`                  | 🔄 Toggle NES manual mode           |
-| `Ctrl+Shift+A` / `Cmd+Shift+A` | 📎 Attach selection to Copilot Chat |
-| `Ctrl+Shift+H` / `Cmd+Shift+H` | 🔗 Insert handle reference          |
-| `Ctrl+Shift+Q` / `Cmd+Shift+Q` | 👤 Quick switch account             |
 
 ---
 

@@ -37,7 +37,7 @@ function initializeAccountManager(initialAccounts, initialProviders, initialAnti
         // Ignore state restore failures
     }
     ensureSelectedProvider();
-    
+
     renderPage();
     setupEventListeners();
 }
@@ -113,7 +113,7 @@ function renderQuotaBanner() {
 
     const modelLabel = antigravityQuota.modelName ? escapeHtml(antigravityQuota.modelName) : 'Unknown model';
     const accountLabel = antigravityQuota.accountName ? escapeHtml(antigravityQuota.accountName) : '';
-    
+
     return `
         <div class="notice notice-warning" id="quota-banner">
             <div class="notice-title">Quota exceeded</div>
@@ -167,15 +167,15 @@ function renderSidebar(providerSummary) {
             </div>
             <div class="provider-list">
                 ${providerSummary.map(p => {
-                    const isActive = p.id === selectedProvider;
-                    return `
+        const isActive = p.id === selectedProvider;
+        return `
                         <button class="provider-item ${isActive ? 'active' : ''}" onclick="setSelectedProvider('${p.id}')" title="${escapeHtml(p.name)}">
                             <span class="provider-item-icon">${getProviderIcon(p.id)}</span>
                             <span class="provider-item-name">${escapeHtml(p.name)}</span>
                             <span class="provider-item-count">${p.count}</span>
                         </button>
                     `;
-                }).join('')}
+    }).join('')}
             </div>
             <div class="sidebar-footer">
                 <button class="btn btn-ghost btn-block" onclick="showAddAccountModal()">Add account</button>
@@ -205,9 +205,9 @@ function renderContent(selectedProviderInfo, providerAccounts) {
             </div>
 
             ${providerAccounts.length > 0
-                ? `<div class="account-cards">${providerAccounts.map(account => renderAccountCard(account)).join('')}</div>`
-                : renderProviderEmptyState(selectedProviderInfo.id)
-            }
+            ? `<div class="account-cards">${providerAccounts.map(account => renderAccountCard(account)).join('')}</div>`
+            : renderProviderEmptyState(selectedProviderInfo.id)
+        }
         </div>
     `;
 }
@@ -245,11 +245,11 @@ function renderAccountQuotaState(accountId) {
 
     const isInCooldown = isAccountInQuotaCooldown(accountId);
     const remaining = isInCooldown ? state.quotaResetAt - Date.now() : 0;
-    
+
     // Calculate success rate
     const totalRequests = state.successCount + state.failureCount;
     const successRate = totalRequests > 0 ? Math.round((state.successCount / totalRequests) * 100) : 100;
-    
+
     let statusClass = 'success';
     if (isInCooldown) {
         statusClass = 'warning';
@@ -401,19 +401,19 @@ function renderProviderSections() {
         }
         accountsByProvider[account.provider].push(account);
     }
-    
+
     // Get all providers (including those without accounts)
     const allProviders = [...new Set([...providers.map(p => p.id), ...Object.keys(accountsByProvider)])];
-    
+
     if (allProviders.length === 0) {
         return renderEmptyState();
     }
-    
+
     return allProviders.map(providerId => {
         const providerInfo = providers.find(p => p.id === providerId) || { id: providerId, name: providerId };
         const providerAccounts = accountsByProvider[providerId] || [];
         const isCollapsed = collapsedProviders[providerId];
-        
+
         return `
             <div class="provider-section" data-provider="${providerId}">
                 <div class="provider-header" onclick="toggleProvider('${providerId}')">
@@ -430,10 +430,10 @@ function renderProviderSections() {
                     </div>
                 </div>
                 <div class="provider-content ${isCollapsed ? 'collapsed' : ''}">
-                    ${providerAccounts.length > 0 
-                        ? renderAccountList(providerAccounts)
-                        : renderProviderEmptyState(providerId)
-                    }
+                    ${providerAccounts.length > 0
+                ? renderAccountList(providerAccounts)
+                : renderProviderEmptyState(providerId)
+            }
                 </div>
             </div>
         `;
@@ -473,19 +473,19 @@ function renderAccountListHeader() {
 function renderAccountCard(account) {
     const initials = getInitials(account.displayName);
     const isDefault = account.isDefault;
-    const isQuotaLimited = antigravityQuota && 
-        account.provider === 'antigravity' && 
+    const isQuotaLimited = antigravityQuota &&
+        account.provider === 'antigravity' &&
         antigravityQuota.accountId === account.id;
     const isCodexAccount = account.provider === 'codex';
     const codexRateLimit = isCodexAccount ? getCodexRateLimitForAccount(account.id) : null;
-    
+
     // Check account quota state from cache
     const quotaState = getAccountQuotaState(account.id);
     const isInQuotaCooldown = isAccountInQuotaCooldown(account.id);
 
     const statusClass = escapeHtml(account.status);
     const authLabel = account.authType === 'oauth' ? 'OAuth' : 'API Key';
-    
+
     // Calculate success rate for compact display
     let statsText = '';
     if (quotaState) {
@@ -493,7 +493,7 @@ function renderAccountCard(account) {
         const rate = total > 0 ? Math.round((quotaState.successCount / total) * 100) : 100;
         statsText = `✓${quotaState.successCount} ✗${quotaState.failureCount}`;
     }
-    
+
     return `
         <div class="account-card-simple ${isDefault ? 'active' : ''} ${isQuotaLimited || isInQuotaCooldown ? 'quota-limited' : ''}" data-account-id="${account.id}">
             <div class="account-card-left" onclick="handleAccountCardClick(event, '${account.id}', ${isDefault})">
@@ -571,6 +571,7 @@ function showAddAccountModal() {
                     <p style="margin-bottom: 16px; color: var(--vscode-descriptionForeground);">
                         Select a provider to add an account:
                     </p>
+                   
                     <div class="provider-select-grid">
                         ${providers.map(p => `
                             <div class="provider-select-item" onclick="selectProviderForAdd('${p.id}')" data-provider="${p.id}">
@@ -594,7 +595,7 @@ function showAddAccountModal() {
 function selectProviderForAdd(providerId) {
     const provider = providers.find(p => p.id === providerId);
     if (!provider) return;
-    
+
     if (provider.authType === 'oauth') {
         // Trigger OAuth login
         vscode.postMessage({
@@ -659,17 +660,17 @@ function showApiKeyForm(providerId, providerName) {
  */
 function submitAddAccount(event, providerId) {
     event.preventDefault();
-    
+
     const displayName = document.getElementById('displayName').value.trim();
     const apiKey = document.getElementById('apiKey').value.trim();
     const endpointEl = document.getElementById('endpoint');
     const endpoint = endpointEl ? endpointEl.value.trim() : undefined;
-    
+
     if (!displayName || !apiKey) {
         showToast('Please fill in all required fields', 'error');
         return;
     }
-    
+
     vscode.postMessage({
         command: 'addApiKeyAccount',
         provider: providerId,
@@ -677,7 +678,7 @@ function submitAddAccount(event, providerId) {
         apiKey: apiKey,
         endpoint: endpoint
     });
-    
+
     closeModal();
 }
 
@@ -691,7 +692,7 @@ function addAccountForProvider(providerId) {
         showApiKeyForm(providerId, capitalizeFirst(providerId));
         return;
     }
-    
+
     if (provider.authType === 'oauth') {
         vscode.postMessage({
             command: 'addOAuthAccount',
@@ -707,7 +708,7 @@ function addAccountForProvider(providerId) {
  */
 function setDefaultAccount(accountId) {
     const account = accounts.find(a => a.id === accountId);
-    
+
     // Check quota for Antigravity accounts before switching
     if (account && account.provider === 'antigravity') {
         checkQuotaBeforeSwitch(accountId);
@@ -726,14 +727,14 @@ function setDefaultAccount(accountId) {
 function checkQuotaBeforeSwitch(accountId) {
     const account = accounts.find(a => a.id === accountId);
     if (!account) return;
-    
+
     // Show loading state on the Use button
     const useButton = document.querySelector(`[data-account-id="${accountId}"] .btn-use`);
     if (useButton) {
         useButton.disabled = true;
         useButton.textContent = 'Checking...';
     }
-    
+
     // Request quota check from backend
     vscode.postMessage({
         command: 'checkQuota',
@@ -747,21 +748,21 @@ function checkQuotaBeforeSwitch(accountId) {
 function handleQuotaCheckResult(message) {
     const { accountId, success, quotaData, error, message: resultMessage } = message;
     const account = accounts.find(a => a.id === accountId);
-    
+
     // Restore button state
     const useButton = document.querySelector(`[data-account-id="${accountId}"] .btn-use`);
     if (useButton) {
         useButton.disabled = false;
         useButton.textContent = 'Use';
     }
-    
+
     if (success) {
         if (quotaData) {
             // Show quota info in toast with color coding
             const minQuota = quotaData.minQuota;
             let toastType = 'success';
             let icon = '✅';
-            
+
             if (minQuota < 10) {
                 toastType = 'error';
                 icon = '⚠️';
@@ -769,13 +770,13 @@ function handleQuotaCheckResult(message) {
                 toastType = 'warning';
                 icon = '⚠️';
             }
-            
+
             const quotaMsg = `${icon} Quota refreshed - Gemini: ${quotaData.geminiQuota}%, Claude: ${quotaData.claudeQuota}%`;
             showToast(quotaMsg, toastType);
         } else if (resultMessage) {
             showToast(resultMessage, 'info');
         }
-        
+
         // Proceed with account switch
         vscode.postMessage({
             command: 'setDefaultAccount',
@@ -800,11 +801,11 @@ function handleAccountCardClick(event, accountId, isDefault) {
 function showAccountDetails(accountId) {
     const account = accounts.find(a => a.id === accountId);
     if (!account) return;
-    
-    const isQuotaLimited = antigravityQuota && 
-        account.provider === 'antigravity' && 
+
+    const isQuotaLimited = antigravityQuota &&
+        account.provider === 'antigravity' &&
         antigravityQuota.accountId === account.id;
-    
+
     const quotaSection = isQuotaLimited ? `
         <div style="margin-top: 16px; padding: 12px; background: rgba(255, 196, 0, 0.1); border-radius: 8px; border: 1px solid rgba(255, 196, 0, 0.3);">
             <div style="font-weight: 600; color: var(--vscode-notificationsWarningForeground, #ffc400); margin-bottom: 8px;">
@@ -823,7 +824,7 @@ function showAccountDetails(accountId) {
             </div>
         </div>
     ` : '';
-    
+
     const modalContainer = document.getElementById('modal-container');
     modalContainer.innerHTML = `
         <div class="modal-overlay" onclick="closeModal(event)">
@@ -978,7 +979,7 @@ function showToast(message, type = 'info') {
         <span>${escapeHtml(message)}</span>
     `;
     container.appendChild(toast);
-    
+
     setTimeout(() => {
         toast.remove();
     }, 3000);
@@ -1044,7 +1045,7 @@ function updateAccountQuotaState(accountId, state) {
             accountQuotaStates.push(state);
         }
     }
-    
+
     // Re-render the affected account card
     const accountCard = document.querySelector(`[data-account-id="${accountId}"]`);
     if (accountCard) {
@@ -1061,7 +1062,7 @@ function getProviderIcon(providerId) {
     // if (providerImageUris[providerId]) {
     //     return `<img src="${providerImageUris[providerId]}" alt="${providerId}" class="provider-icon-img" />`;
     // }
-    
+
     // Fallback emoji icons
     const icons = {
         'antigravity': '🌐',
