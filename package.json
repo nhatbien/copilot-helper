@@ -3,7 +3,7 @@
     "publisher": "vicanent",
     "displayName": "Copilot Helper Pro",
     "description": "An extension that provides model support for GitHub Copilot Chat, including ZhipuAI, MiniMax, MoonshotAI, DeepSeek, Alibaba Cloud Bailian, and custom OpenAI/Anthropic compatible models.",
-    "version": "0.15.25",
+    "version": "0.15.26",
     "license": "MIT",
     "keywords": [
         "ai",

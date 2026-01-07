@@ -290,7 +290,7 @@ async function showAntigravityModelsQuickPick(models: AntigravityModel[]): Promi
             try {
                 await CompatibleModelManager.addModel({
                     id: `${PROVIDER_KEY}:${item.model.id}`,
-                    name: `${item.model.displayName} (Antigravity)`,
+                    name: item.model.displayName,
                     provider: PROVIDER_KEY,
                     sdkMode: 'openai' as const,
                     baseUrl: 'https://cloudcode-pa.googleapis.com/v1internal',
@@ -390,7 +390,6 @@ export async function antigravityLoginCommand(): Promise<void> {
             const models = await AntigravityAuth.refreshModels();
             if (models.length > 0) {
                 vscode.window.showInformationMessage(`Refreshed ${models.length} Antigravity models`);
-                await showAntigravityModelsQuickPick(models);
             } else {
                 vscode.window.showWarningMessage('No models found from Antigravity');
             }
@@ -402,7 +401,10 @@ export async function antigravityLoginCommand(): Promise<void> {
                 models = await AntigravityAuth.getModels();
             }
             if (models.length > 0) {
-                await showAntigravityModelsQuickPick(models);
+                const modelList = models.map(m => `• ${m.displayName}`).join('\n');
+                vscode.window.showInformationMessage(`Available Antigravity models (${models.length}):\n${modelList}`, {
+                    modal: false
+                });
             } else {
                 vscode.window.showWarningMessage('No models available from Antigravity');
             }

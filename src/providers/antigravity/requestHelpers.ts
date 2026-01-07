@@ -48,7 +48,8 @@ const GEMINI_UNSUPPORTED_FIELDS = new Set([
     'oneOf',
     'not',
     'strict',
-    'input_examples'
+    'input_examples',
+    'examples'
 ]);
 
 const MODEL_ALIASES: Record<string, string> = {
