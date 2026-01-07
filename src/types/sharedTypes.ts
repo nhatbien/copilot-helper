@@ -96,6 +96,10 @@ export interface ModelOverride {
      * 如果提供，将在API请求中合并到请求体中
      */
     extraBody?: Record<string, unknown>;
+    /**
+     * 是否在聊天界面显示思考过程（推荐thinking模型启用）
+     */
+    outputThinking?: boolean;
 }
 
 /**

@@ -407,6 +407,13 @@ export class ConfigManager {
                             `  Model ${modelOverride.id}: Merge extraBody = ${JSON.stringify(existingModel.extraBody)}`
                         );
                     }
+                    // Override outputThinking
+                    if (modelOverride.outputThinking !== undefined) {
+                        existingModel.outputThinking = modelOverride.outputThinking;
+                        Logger.debug(
+                            `  Model ${modelOverride.id}: Override outputThinking = ${modelOverride.outputThinking}`
+                        );
+                    }
                 } else {
                     const fullConfig = modelOverride as ModelConfig;
                     // Add new model
@@ -424,7 +431,10 @@ export class ConfigManager {
                         ...(modelOverride.sdkMode && { sdkMode: modelOverride.sdkMode }),
                         ...(modelOverride.baseUrl && { baseUrl: modelOverride.baseUrl }),
                         ...(modelOverride.customHeader && { customHeader: modelOverride.customHeader }),
-                        ...(modelOverride.extraBody && { extraBody: modelOverride.extraBody })
+                        ...(modelOverride.extraBody && { extraBody: modelOverride.extraBody }),
+                        ...(modelOverride.outputThinking !== undefined && {
+                            outputThinking: modelOverride.outputThinking
+                        })
                     };
                     config.models.push(newModel);
                     Logger.info(`  Add new model: ${modelOverride.id}`);

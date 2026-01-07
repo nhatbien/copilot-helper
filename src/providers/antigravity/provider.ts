@@ -94,15 +94,38 @@ export class AntigravityProvider extends GenericModelProvider implements Languag
                 Logger.warn('No Antigravity models available');
                 return [];
             }
-            this.cachedModels = models.map(m => ({
-                id: m.id,
-                name: m.displayName || m.name,
-                tooltip: `${m.displayName} - Antigravity`,
-                maxInputTokens: m.maxTokens || 200000,
-                maxOutputTokens: m.maxOutputTokens || 8192,
-                sdkMode: 'openai' as const,
-                capabilities: { toolCalling: true, imageInput: true }
-            }));
+            // Get provider overrides from settings
+            const overrides = ConfigManager.getProviderOverrides();
+            const antigravityOverride = overrides[AntigravityProvider.PROVIDER_KEY];
+            const modelOverrides = antigravityOverride?.models || [];
+
+            this.cachedModels = models.map(m => {
+                // Find override for this model
+                const override = modelOverrides.find(o => o.id === m.id);
+
+                const baseConfig: ModelConfig = {
+                    id: m.id,
+                    name: m.displayName || m.name,
+                    tooltip: `${m.displayName} - Antigravity`,
+                    maxInputTokens: m.maxTokens || 200000,
+                    maxOutputTokens: override?.maxOutputTokens || m.maxOutputTokens || 8192,
+                    sdkMode: 'openai' as const,
+                    capabilities: { toolCalling: true, imageInput: true }
+                };
+
+                // Apply extraBody from override if present
+                if (override?.extraBody) {
+                    baseConfig.extraBody = override.extraBody;
+                    Logger.debug(`[Antigravity] Applied extraBody override to model ${m.id}`);
+                }
+
+                // Apply outputThinking from override if present
+                if (override?.outputThinking !== undefined) {
+                    baseConfig.outputThinking = override.outputThinking;
+                }
+
+                return baseConfig;
+            });
             const rememberLastModel = ConfigManager.getRememberLastModel();
             let lastSelectedId: string | undefined;
             if (rememberLastModel) {
@@ -188,18 +211,18 @@ export class AntigravityProvider extends GenericModelProvider implements Languag
                 assignedAccountId,
                 loadBalanceEnabled
             );
-            
+
             // Lấy active account để luôn ưu tiên nó đầu tiên
             const activeAccount = this.accountManager.getActiveAccount(AntigravityProvider.PROVIDER_KEY);
-            
+
             const available = loadBalanceEnabled
                 ? candidates.filter(
-                    a =>
-                        !this.accountManager.isAccountQuotaLimited(a.id) &&
+                      a =>
+                          !this.accountManager.isAccountQuotaLimited(a.id) &&
                           !this.antigravityHandler.isInCooldown(model.id, a.id)
-                )
+                  )
                 : candidates;
-            
+
             // Đảm bảo activeAccount luôn được thử đầu tiên nếu nó trong candidates
             // Chỉ skip nếu thực sự bị lỗi khi gọi API
             let accountsToTry: Account[];
@@ -218,8 +241,10 @@ export class AntigravityProvider extends GenericModelProvider implements Languag
                     accountsToTry = candidates;
                 }
             }
-            
-            Logger.debug(`[antigravity] Active account: ${activeAccount?.displayName || 'none'}, accountsToTry: ${accountsToTry.map(a => a.displayName).join(', ')}`);
+
+            Logger.debug(
+                `[antigravity] Active account: ${activeAccount?.displayName || 'none'}, accountsToTry: ${accountsToTry.map(a => a.displayName).join(', ')}`
+            );
             let lastError: unknown;
             let switchedAccount = false;
             for (const account of accountsToTry) {
