@@ -94,7 +94,7 @@ export class OpenAIHandler {
 
         // Tạo cache key dựa trên config
         const cacheKey = `${providerKey}:${baseURL}:${JSON.stringify(defaultHeaders)}`;
-        
+
         // Kiểm tra cache
         const cached = this.clientCache.get(cacheKey);
         if (cached) {
@@ -111,7 +111,7 @@ export class OpenAIHandler {
             maxRetries: 2, // Giảm retries để tránh lag
             timeout: 60000 // 60s timeout
         });
-        
+
         // Cache client
         this.clientCache.set(cacheKey, { client, lastUsed: Date.now() });
         Logger.debug(`${this.displayName} OpenAI SDK 客户端已创建，使用baseURL: ${baseURL}`);
@@ -405,6 +405,10 @@ export class OpenAIHandler {
             // 思考内容缓存的最大长度，达到这个范围时报告
             const MAX_THINKING_BUFFER_LENGTH = 10;
 
+            // 用于解析 <thinking>...</thinking> 标签的状态
+            let isInsideThinkingTag = false; // 是否在 <thinking> 标签内
+            let thinkingTagBuffer: string = ''; // 用于累积可能的标签片段
+
             // Activity indicator - report empty text periodically to keep UI responsive
             let lastActivityReportTime = Date.now();
             const ACTIVITY_REPORT_INTERVAL_MS = 300; // Report every 300ms to show activity (giảm từ 500ms)
@@ -418,12 +422,12 @@ export class OpenAIHandler {
                 }
                 return false;
             };
-            
+
             // Đánh dấu có activity (reset timer)
             const markActivity = () => {
                 lastActivityReportTime = Date.now();
             };
-            
+
             // Interval để tự động report activity khi không có data
             let activityInterval: NodeJS.Timeout | null = null;
             const startActivityInterval = () => {
@@ -440,7 +444,7 @@ export class OpenAIHandler {
                     activityInterval = null;
                 }
             };
-            
+
             // Bắt đầu activity interval
             startActivityInterval();
 
@@ -472,49 +476,108 @@ export class OpenAIHandler {
                         } catch {
                             // 日志不应中断流处理
                         }
-                        // 判断 delta 是否包含可见字符（去除所有空白、不可见空格后长度 > 0）
-                        const deltaVisible =
-                            typeof delta === 'string' && delta.replace(/[\s\uFEFF\xA0]+/g, '').length > 0;
-                        if (deltaVisible && currentThinkingId) {
-                            // 在输出第一个可见 content 前，如果有缓存的思考内容，先报告出来
-                            if (thinkingContentBuffer.length > 0) {
-                                try {
-                                    progress.report(
-                                        new vscode.LanguageModelThinkingPart(thinkingContentBuffer, currentThinkingId)
-                                    );
-                                    Logger.trace(
-                                        `${model.name} 在输出content前报告剩余思考内容: ${thinkingContentBuffer.length}字符`
-                                    );
-                                    thinkingContentBuffer = ''; // 清空缓存
-                                    hasThinkingContent = true; // 标记已输出 thinking 内容
-                                } catch (e) {
-                                    Logger.trace(`${model.name} 报告剩余思考内容失败: ${String(e)}`);
-                                }
-                            }
 
-                            // 然后结束当前思维链
-                            try {
-                                Logger.trace(`${model.name} 在输出content前结束当前思维链 id=${currentThinkingId}`);
-                                progress.report(new vscode.LanguageModelThinkingPart('', currentThinkingId));
-                            } catch (e) {
-                                // 报告失败不应该中断主流
-                                Logger.trace(
-                                    `${model.name} 发送 thinking done(id=${currentThinkingId}) 失败: ${String(e)}`
-                                );
-                            }
-                            currentThinkingId = null;
+                        if (!delta) {
+                            return;
                         }
 
-                        // 直接输出常规内容
-                        progress.report(new vscode.LanguageModelTextPart(delta));
-                        hasReceivedContent = true;
+                        // 解析 <thinking>...</thinking> 标签
+                        const parseResult = this.parseThinkingTags(delta, isInsideThinkingTag, thinkingTagBuffer);
+
+                        // 更新状态
+                        isInsideThinkingTag = parseResult.isInsideThinkingTag;
+                        thinkingTagBuffer = parseResult.remainingTagBuffer;
+
+                        // 按原始顺序处理所有部分
+                        for (const part of parseResult.orderedParts) {
+                            if (part.type === 'thinking') {
+                                // 处理思考内容
+                                if (part.value.length > 0) {
+                                    // 如果当前没有 active id，则生成一个用于本次思维链
+                                    if (!currentThinkingId) {
+                                        currentThinkingId = `thinking_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+                                        Logger.trace(`${model.name} 创建新思维链 ID (from tag): ${currentThinkingId}`);
+                                    }
+
+                                    // 将思考内容添加到缓冲
+                                    thinkingContentBuffer += part.value;
+
+                                    // 检查是否达到报告条件
+                                    if (thinkingContentBuffer.length >= MAX_THINKING_BUFFER_LENGTH) {
+                                        try {
+                                            progress.report(
+                                                new vscode.LanguageModelThinkingPart(
+                                                    thinkingContentBuffer,
+                                                    currentThinkingId
+                                                )
+                                            );
+                                            thinkingContentBuffer = ''; // 清空缓冲
+                                            hasThinkingContent = true;
+                                        } catch (e) {
+                                            Logger.trace(`${model.name} 报告思考内容失败 (from tag): ${String(e)}`);
+                                        }
+                                    } else {
+                                        hasThinkingContent = true;
+                                    }
+                                }
+                            } else {
+                                // 处理普通内容
+                                if (part.value.length > 0) {
+                                    // 判断 contentPart 是否包含可见字符
+                                    const partVisible = part.value.replace(/[\s\uFEFF\xA0]+/g, '').length > 0;
+
+                                    if (partVisible && currentThinkingId) {
+                                        // 遇到可见 content 前，如果有缓存的思考内容，先报告出来
+                                        if (thinkingContentBuffer.length > 0) {
+                                            try {
+                                                progress.report(
+                                                    new vscode.LanguageModelThinkingPart(
+                                                        thinkingContentBuffer,
+                                                        currentThinkingId
+                                                    )
+                                                );
+                                                Logger.trace(
+                                                    `${model.name} 在输出content前报告剩余思考内容: ${thinkingContentBuffer.length}字符`
+                                                );
+                                                thinkingContentBuffer = ''; // 清空缓存
+                                                hasThinkingContent = true; // 标记已输出 thinking 内容
+                                            } catch (e) {
+                                                Logger.trace(`${model.name} 报告剩余思考内容失败: ${String(e)}`);
+                                            }
+                                        }
+
+                                        // 然后结束当前思维链：在输出任何可见内容前，确保思维链已正确关闭
+                                        // 注意：即使 isInsideThinkingTag 为 true（例如 <thinking>A</thinking>content<thinking>B），
+                                        // 当 contentPart 存在时，说明我们已经遇到了 </thinking>，所以应该关闭当前思维链
+                                        try {
+                                            Logger.trace(
+                                                `${model.name} 在输出content前结束当前思维链 id=${currentThinkingId}`
+                                            );
+                                            progress.report(
+                                                new vscode.LanguageModelThinkingPart('', currentThinkingId)
+                                            );
+                                        } catch (e) {
+                                            // 报告失败不应该中断主流
+                                            Logger.trace(
+                                                `${model.name} 发送 thinking done(id=${currentThinkingId}) 失败: ${String(e)}`
+                                            );
+                                        }
+                                        currentThinkingId = null;
+                                    }
+
+                                    // 直接输出常规内容
+                                    progress.report(new vscode.LanguageModelTextPart(part.value));
+                                    hasReceivedContent = true;
+                                }
+                            }
+                        }
                     })
                     .on('tool_calls.function.arguments.done', event => {
                         // SDK 自动累积完成后触发的完整工具调用事件
                         if (token.isCancellationRequested) {
                             return;
                         }
-                        
+
                         // Đánh dấu có activity
                         markActivity();
 
@@ -614,7 +677,9 @@ export class OpenAIHandler {
                                 } catch (secondError) {
                                     // 修复后仍然失败，输出详细错误信息
                                     Logger.error(`❌ 工具调用参数解析失败: ${event.name} (索引: ${event.index})`);
-                                    Logger.error(`原始参数字符串 (前100字符): ${event.arguments?.substring(0, 100)}`);
+                                    // 避免输出过长的参数字符串
+                                    const argsPreview = event.arguments?.substring(0, 200) || '';
+                                    Logger.error(`原始参数字符串 (前200字符): ${argsPreview}`);
                                     Logger.error(`首次解析错误: ${firstError}`);
                                     Logger.error(`去重修复后仍失败: ${secondError}`);
                                     // 抛出原始错误
@@ -650,8 +715,7 @@ export class OpenAIHandler {
                             finalUsage = chunk.usage;
                         }
 
-                        // 处理思考内容（reasoning_content）和兼容旧格式：有些模型把最终结果放在 choice.message
-                        // 思维链是可重入的：遇到时输出；在后续第一次可见 content 输出前，需要结束当前思维链（done）
+                        // 处理思考内容（reasoning_content）和兼容旧格式
                         if (chunk.choices && chunk.choices.length > 0) {
                             // 遍历所有choices，处理每个choice的reasoning_content和message.content
                             for (let choiceIndex = 0; choiceIndex < chunk.choices.length; choiceIndex++) {
@@ -659,31 +723,43 @@ export class OpenAIHandler {
                                 const delta = choice.delta as ExtendedDelta | undefined;
                                 const message = choice.message;
 
+                                // 使用 Record 类型访问可能的非标准字段
+                                const choiceRaw = choice as Record<string, unknown>;
+                                const deltaRaw = delta as Record<string, unknown> | undefined;
+
                                 // 检查是否有工具调用开始（tool_calls delta 存在但还没有 arguments）
                                 if (delta?.tool_calls && delta.tool_calls.length > 0) {
                                     for (const toolCall of delta.tool_calls) {
                                         // 如果有工具调用但没有 arguments，表示工具调用刚开始
                                         if (toolCall.index !== undefined && !toolCall.function?.arguments) {
-                                            // 在工具调用开始时，如果有缓存的思考内容，先报告出来
-                                            if (thinkingContentBuffer.length > 0 && currentThinkingId) {
+                                            // 在工具调用开始时，如果有一个活跃的思维链，必须结束它
+                                            if (currentThinkingId) {
                                                 try {
-                                                    progress.report(
-                                                        new vscode.LanguageModelThinkingPart(
-                                                            thinkingContentBuffer,
-                                                            currentThinkingId
-                                                        )
-                                                    );
-                                                    Logger.trace(
-                                                        `${model.name} 在工具调用开始时报告剩余思考内容: ${thinkingContentBuffer.length}字符`
-                                                    );
-                                                    // 结束当前思维链
+                                                    // 先报告剩余的缓冲内容（如果有）
+                                                    if (thinkingContentBuffer.length > 0) {
+                                                        progress.report(
+                                                            new vscode.LanguageModelThinkingPart(
+                                                                thinkingContentBuffer,
+                                                                currentThinkingId
+                                                            )
+                                                        );
+                                                        Logger.trace(
+                                                            `${model.name} 在工具调用开始时报告剩余思考内容: ${thinkingContentBuffer.length}字符`
+                                                        );
+                                                        thinkingContentBuffer = ''; // 清空缓存
+                                                        hasThinkingContent = true; // 标记已输出 thinking 内容
+                                                    }
+
+                                                    // 发送结束信号
                                                     progress.report(
                                                         new vscode.LanguageModelThinkingPart('', currentThinkingId)
                                                     );
-                                                    thinkingContentBuffer = ''; // 清空缓存
-                                                    hasThinkingContent = true; // 标记已输出 thinking 内容
+                                                    Logger.trace(
+                                                        `${model.name} 在工具调用开始时结束思维链 id=${currentThinkingId}`
+                                                    );
+                                                    currentThinkingId = null; // 重置 ID
                                                 } catch (e) {
-                                                    Logger.trace(`${model.name} 报告剩余思考内容失败: ${String(e)}`);
+                                                    Logger.trace(`${model.name} 结束思考内容失败: ${String(e)}`);
                                                 }
                                             }
                                             Logger.trace(
@@ -693,15 +769,33 @@ export class OpenAIHandler {
                                     }
                                 }
 
-                                // 兼容：优先使用 delta 中的 reasoning_content，否则尝试从 message 中读取
-                                const reasoningContent = delta?.reasoning_content ?? message?.reasoning_content;
-                                if (reasoningContent) {
+                                // 安全地从 Record<string, unknown> 中获取字符串字段
+                                const getSafeStringField = (
+                                    obj: Record<string, unknown> | undefined,
+                                    key: string
+                                ): string | undefined => {
+                                    const value = obj?.[key];
+                                    return typeof value === 'string' ? value : undefined;
+                                };
+
+                                // 兼容：从多个可能位置获取 reasoning_content
+                                // LiteLLM 可能将其放在 delta.reasoning_content, delta.thinking_content, 或 choice.reasoning_content
+                                const reasoningContent =
+                                    getSafeStringField(deltaRaw, 'reasoning_content') ??
+                                    getSafeStringField(deltaRaw, 'thinking_content') ??
+                                    getSafeStringField(deltaRaw, 'thought') ??
+                                    getSafeStringField(choiceRaw, 'reasoning_content') ??
+                                    (typeof message?.reasoning_content === 'string'
+                                        ? message.reasoning_content
+                                        : undefined);
+
+                                if (reasoningContent && choiceIndex === 0) {
                                     // 检查模型配置中的 outputThinking 设置
                                     const shouldOutputThinking = modelConfig.outputThinking !== false; // 默认 true
                                     if (shouldOutputThinking) {
                                         try {
                                             Logger.trace(
-                                                `接收到思考内容 (choice ${choiceIndex}): ${reasoningContent.length}字符, 内容="${reasoningContent}"`
+                                                `接收到思考内容 (choice ${choiceIndex}): ${reasoningContent.length}字符`
                                             );
 
                                             // 如果当前没有 active id，则生成一个用于本次思维链
@@ -741,33 +835,113 @@ export class OpenAIHandler {
                                 // 另外兼容：如果服务端把最终文本放在 message.content（旧/混合格式），当作 content 增量处理
                                 const messageContent = message?.content;
                                 if (
+                                    choiceIndex === 0 && // 仅处理第一个 choice，避免多 choice 导致状态混乱
                                     typeof messageContent === 'string' &&
-                                    messageContent.replace(/[\s\uFEFF\xA0]+/g, '').length > 0
+                                    messageContent.length > 0
                                 ) {
-                                    // 遇到可见 content 前，如果有未结束的 thinking，则先结束之
-                                    if (currentThinkingId) {
-                                        try {
-                                            Logger.trace(
-                                                `${model.name} 在输出message.content前结束当前思维链 id=${currentThinkingId} (choice ${choiceIndex})`
-                                            );
-                                            progress.report(
-                                                new vscode.LanguageModelThinkingPart('', currentThinkingId)
-                                            );
-                                        } catch (e) {
-                                            Logger.trace(
-                                                `${model.name} 发送 thinking done(id=${currentThinkingId}) 失败 (choice ${choiceIndex}): ${String(e)}`
-                                            );
+                                    // 解析 <thinking>...</thinking> 标签
+                                    const parseResult = this.parseThinkingTags(
+                                        messageContent,
+                                        isInsideThinkingTag,
+                                        thinkingTagBuffer
+                                    );
+
+                                    // 更新状态
+                                    isInsideThinkingTag = parseResult.isInsideThinkingTag;
+                                    thinkingTagBuffer = parseResult.remainingTagBuffer;
+
+                                    // 按原始顺序处理所有部分
+                                    for (const part of parseResult.orderedParts) {
+                                        if (part.type === 'thinking') {
+                                            // 处理思考内容
+                                            if (part.value.length > 0) {
+                                                // 如果当前没有 active id，则生成一个用于本次思维链
+                                                if (!currentThinkingId) {
+                                                    currentThinkingId = `thinking_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+                                                    Logger.trace(
+                                                        `${model.name} 创建新思维链 ID (from message fallback): ${currentThinkingId}`
+                                                    );
+                                                }
+
+                                                // 将思考内容添加到缓冲
+                                                thinkingContentBuffer += part.value;
+
+                                                // 检查是否达到报告条件
+                                                if (thinkingContentBuffer.length >= MAX_THINKING_BUFFER_LENGTH) {
+                                                    try {
+                                                        progress.report(
+                                                            new vscode.LanguageModelThinkingPart(
+                                                                thinkingContentBuffer,
+                                                                currentThinkingId
+                                                            )
+                                                        );
+                                                        thinkingContentBuffer = ''; // 清空缓冲
+                                                        hasThinkingContent = true;
+                                                    } catch (e) {
+                                                        Logger.trace(
+                                                            `${model.name} 报告思考内容失败 (from message fallback): ${String(e)}`
+                                                        );
+                                                    }
+                                                } else {
+                                                    hasThinkingContent = true;
+                                                }
+                                            }
+                                        } else {
+                                            // 处理普通内容
+                                            if (part.value.length > 0) {
+                                                // 判断 contentPart 是否包含可见字符
+                                                const partVisible =
+                                                    part.value.replace(/[\s\uFEFF\xA0]+/g, '').length > 0;
+
+                                                if (partVisible && currentThinkingId) {
+                                                    // 遇到可见 content 前，如果有缓存的思考内容，先报告出来
+                                                    if (thinkingContentBuffer.length > 0) {
+                                                        try {
+                                                            progress.report(
+                                                                new vscode.LanguageModelThinkingPart(
+                                                                    thinkingContentBuffer,
+                                                                    currentThinkingId
+                                                                )
+                                                            );
+                                                            Logger.trace(
+                                                                `${model.name} 在输出message content前报告剩余思考内容: ${thinkingContentBuffer.length}字符`
+                                                            );
+                                                            thinkingContentBuffer = ''; // 清空缓存
+                                                            hasThinkingContent = true; // 标记已输出 thinking 内容
+                                                        } catch (e) {
+                                                            Logger.trace(
+                                                                `${model.name} 报告剩余思考内容失败: ${String(e)}`
+                                                            );
+                                                        }
+                                                    }
+
+                                                    // 然后结束当前思维链
+                                                    try {
+                                                        Logger.trace(
+                                                            `${model.name} 在输出message content前结束当前思维链 id=${currentThinkingId}`
+                                                        );
+                                                        progress.report(
+                                                            new vscode.LanguageModelThinkingPart('', currentThinkingId)
+                                                        );
+                                                    } catch (e) {
+                                                        Logger.trace(
+                                                            `${model.name} 发送 thinking done(id=${currentThinkingId}) 失败: ${String(e)}`
+                                                        );
+                                                    }
+                                                    currentThinkingId = null;
+                                                }
+
+                                                // 直接输出常规内容
+                                                try {
+                                                    progress.report(new vscode.LanguageModelTextPart(part.value));
+                                                    hasReceivedContent = true;
+                                                } catch (e) {
+                                                    Logger.trace(
+                                                        `${model.name} report message content 失败 (choice ${choiceIndex}): ${String(e)}`
+                                                    );
+                                                }
+                                            }
                                         }
-                                        currentThinkingId = null;
-                                    }
-                                    // 然后报告文本内容
-                                    try {
-                                        progress.report(new vscode.LanguageModelTextPart(messageContent));
-                                        hasReceivedContent = true;
-                                    } catch (e) {
-                                        Logger.trace(
-                                            `${model.name} report message content 失败 (choice ${choiceIndex}): ${String(e)}`
-                                        );
                                     }
                                 }
                             }
@@ -789,6 +963,17 @@ export class OpenAIHandler {
                         hasThinkingContent = true; // 标记已输出 thinking 内容
                     } catch (e) {
                         Logger.trace(`流结束时报告思考内容失败: ${String(e)}`);
+                    }
+                }
+
+                // 流结束时，如果有未关闭的思维链，发送终止信号
+                if (currentThinkingId) {
+                    try {
+                        Logger.trace(`${model.name} 流结束时关闭未终止的思维链 id=${currentThinkingId}`);
+                        progress.report(new vscode.LanguageModelThinkingPart('', currentThinkingId));
+                        currentThinkingId = null;
+                    } catch (e) {
+                        Logger.trace(`流结束时关闭思维链失败: ${String(e)}`);
                     }
                 }
 
@@ -818,6 +1003,7 @@ export class OpenAIHandler {
                     throw streamError;
                 }
             } finally {
+                stopActivityInterval();
                 cancellationListener.dispose();
             }
             // 只有在输出了 thinking 内容但没有输出 content 时才添加 <think/> 占位符
@@ -1262,6 +1448,147 @@ export class OpenAIHandler {
             Logger.error(`❌ 创建图像DataURL失败: ${error}`);
             throw error;
         }
+    }
+
+    /**
+     * 解析内容中的 <thinking>...</thinking> 标签。
+     *
+     * 当以流式或分块的方式处理模型输出时，用于从文本中提取思考内容与普通内容。
+     * 注意：本方法不支持嵌套的 <thinking> 标签，遇到嵌套标签时将以非嵌套方式处理。
+     *
+     * @param content 当前要解析的文本内容（本次分片）。
+     * @param isInsideThinkingTag 调用前是否处于 `<thinking>` 标签内部（上一分片的结束状态）。
+     * @param tagBuffer 从上一分片遗留的、尚未完整解析的标签文本缓冲区。
+     * @returns 解析结果对象：
+     * - `orderedParts`: 按照原始顺序排列的内容片段数组，每个片段包含类型（'thinking' 或 'content'）和值。
+     * - `isInsideThinkingTag`: 解析结束时是否仍然处于 `<thinking>` 标签内部（例如遇到未闭合的标签时为 true），需在下一次调用时传入。
+     * - `remainingTagBuffer`: 本次解析后剩余的、尚未构成完整标签的部分标签文本，需要在处理下一个内容分片时继续使用。
+     */
+    private parseThinkingTags(
+        content: string,
+        isInsideThinkingTag: boolean,
+        tagBuffer: string
+    ): {
+        orderedParts: Array<{ type: 'thinking' | 'content'; value: string }>;
+        isInsideThinkingTag: boolean;
+        remainingTagBuffer: string;
+    } {
+        const orderedParts: Array<{ type: 'thinking' | 'content'; value: string }> = [];
+        let currentBuffer = tagBuffer + content;
+        let insideTag = isInsideThinkingTag;
+        let remainingBuffer = '';
+
+        while (currentBuffer.length > 0) {
+            if (insideTag) {
+                // 在 thinking 标签内，查找结束标签
+                const endIndex = currentBuffer.indexOf('</thinking>');
+                const nestedStartIndex = currentBuffer.indexOf('<thinking>');
+
+                // 检测嵌套标签：如果在找到结束标签之前发现了另一个开始标签
+                if (nestedStartIndex !== -1 && (endIndex === -1 || nestedStartIndex < endIndex)) {
+                    // 遇到嵌套的 <thinking> 标签，将其作为思考内容的一部分处理（不作为新标签）
+                    // 提取到嵌套标签位置的内容（包括嵌套标签本身）
+                    const contentBeforeNested = currentBuffer.substring(0, nestedStartIndex + '<thinking>'.length);
+                    if (contentBeforeNested.length > 0) {
+                        orderedParts.push({ type: 'thinking', value: contentBeforeNested });
+                    }
+                    currentBuffer = currentBuffer.substring(nestedStartIndex + '<thinking>'.length);
+                    // 继续保持 insideTag = true，因为我们只是跳过了嵌套标签
+                } else if (endIndex !== -1) {
+                    // 找到结束标签
+                    const thinkingContent = currentBuffer.substring(0, endIndex);
+                    if (thinkingContent.length > 0) {
+                        orderedParts.push({ type: 'thinking', value: thinkingContent });
+                    }
+                    currentBuffer = currentBuffer.substring(endIndex + '</thinking>'.length);
+                    insideTag = false;
+                } else {
+                    // 没有找到结束标签，检查是否有部分结束标签
+                    const partialEndMatch = this.findPartialTag(currentBuffer, '</thinking>');
+                    if (partialEndMatch.found) {
+                        // 有部分结束标签，保留到下次处理
+                        const thinkingContent = currentBuffer.substring(0, partialEndMatch.index);
+                        if (thinkingContent.length > 0) {
+                            orderedParts.push({ type: 'thinking', value: thinkingContent });
+                        }
+                        remainingBuffer = currentBuffer.substring(partialEndMatch.index);
+                        currentBuffer = '';
+                    } else {
+                        // 没有部分结束标签，全部是思考内容
+                        orderedParts.push({ type: 'thinking', value: currentBuffer });
+                        currentBuffer = '';
+                    }
+                }
+            } else {
+                // 不在 thinking 标签内，查找开始标签
+                const startIndex = currentBuffer.indexOf('<thinking>');
+                if (startIndex !== -1) {
+                    // 找到开始标签
+                    const beforeThinking = currentBuffer.substring(0, startIndex);
+                    if (beforeThinking.length > 0) {
+                        orderedParts.push({ type: 'content', value: beforeThinking });
+                    }
+                    currentBuffer = currentBuffer.substring(startIndex + '<thinking>'.length);
+                    insideTag = true;
+                } else {
+                    // 没有找到开始标签，检查是否有部分开始标签
+                    const partialStartMatch = this.findPartialTag(currentBuffer, '<thinking>');
+                    if (partialStartMatch.found) {
+                        // 有部分开始标签，保留到下次处理
+                        const normalContent = currentBuffer.substring(0, partialStartMatch.index);
+                        if (normalContent.length > 0) {
+                            orderedParts.push({ type: 'content', value: normalContent });
+                        }
+                        remainingBuffer = currentBuffer.substring(partialStartMatch.index);
+                        currentBuffer = '';
+                    } else {
+                        // 没有部分开始标签，全部是普通内容
+                        orderedParts.push({ type: 'content', value: currentBuffer });
+                        currentBuffer = '';
+                    }
+                }
+            }
+        }
+
+        return {
+            orderedParts,
+            isInsideThinkingTag: insideTag,
+            remainingTagBuffer: remainingBuffer
+        };
+    }
+
+    /**
+     * 查找部分标签（用于处理跨 chunk 的标签）
+     * 使用字符比较而非创建子字符串，提高性能
+     */
+    private findPartialTag(content: string, tag: string): { found: boolean; index: number } {
+        const contentLen = content.length;
+        const tagLen = tag.length;
+
+        // 如果内容或标签过短，不可能存在跨 chunk 的部分标签
+        if (contentLen === 0 || tagLen <= 1) {
+            return { found: false, index: -1 };
+        }
+
+        // 从内容末尾开始，检查是否有标签的前缀
+        // 为避免频繁创建子字符串，这里使用基于索引的字符比较
+        const maxOverlap = Math.min(contentLen, tagLen - 1);
+        for (let i = 1; i <= maxOverlap; i++) {
+            const suffixStart = contentLen - i;
+            let isMatch = true;
+
+            for (let j = 0; j < i; j++) {
+                if (content.charAt(suffixStart + j) !== tag.charAt(j)) {
+                    isMatch = false;
+                    break;
+                }
+            }
+
+            if (isMatch) {
+                return { found: true, index: suffixStart };
+            }
+        }
+        return { found: false, index: -1 };
     }
 
     /**
